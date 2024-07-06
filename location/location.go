@@ -3,6 +3,7 @@ package location
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/jase231/hpd-alerts/models"
 	"googlemaps.github.io/maps"
@@ -23,7 +24,7 @@ func getCoordinates(incidentPtr *models.Incident, mapsToken string) error {
 		return fmt.Errorf("error requesting geocode from google: %v", err)
 	}
 
-	fmt.Println("DEBUG: Google Request Made")
+	log.Println("Google Request Made")
 	incidentPtr.Location.Lat = resp[0].Geometry.Location.Lat
 	incidentPtr.Location.Lng = resp[0].Geometry.Location.Lng
 	return nil

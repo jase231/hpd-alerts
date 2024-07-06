@@ -39,7 +39,7 @@ func NewServer() (*Server, error) {
 }
 
 func (s *Server) scrapeLoop() {
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -75,6 +75,7 @@ func (s *Server) getAlerts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	json.NewEncoder(w).Encode(s.incidents)
 }
 
@@ -96,6 +97,24 @@ func main() {
 		log.Fatalln("couldn't spawn server, quitting:", err)
 	}
 	go server.scrapeLoop()
+
+	fs := http.FileServer(http.Dir("static"))
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/", "/index.html":
+			http.ServeFile(w, r, "static/index.html")
+		case "/henrico.geojson":
+			http.ServeFile(w, r, "static/henrico.geojson")
+		case "/script.js":
+			http.ServeFile(w, r, "static/script.js")
+		case "/style.css":
+			http.ServeFile(w, r, "static/style.css")
+		default:
+			http.NotFound(w, r)
+		}
+	})
 
 	http.HandleFunc("/getAlerts", server.getAlerts)
 	http.HandleFunc("/toggleScraper", server.toggleScraper)
