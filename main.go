@@ -31,7 +31,7 @@ func NewServer(envToken string) (*Server, error) {
 	return &Server{
 		incidents: make(map[string]models.Incident),
 		mapsToken: envToken,
-		isRunning: false,
+		isRunning: true,
 	}, nil
 }
 
@@ -124,7 +124,9 @@ func main() {
 	})
 
 	http.HandleFunc("/getAlerts", server.getAlerts)
-	http.HandleFunc("/toggleScraper", server.toggleScraper)
+	// this function may be useful for eliminating wasted requests to the google maps API when no clients are connected
+	// however, this is not properly implemented yet in the frontend
+	// http.HandleFunc("/toggleScraper", server.toggleScraper)
 
 	log.Println("listening on :8080")
 	http.ListenAndServe(":8080", nil)
