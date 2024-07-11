@@ -49,7 +49,8 @@ func googleGeocode(incidentPtr *models.Incident, mapsToken string) error {
 	}
 
 	request := &maps.GeocodingRequest{
-		Address: incidentPtr.Block + ", Henrico County, VA", // google maps is extremely forgiving for interpreting input here, so we can just use county's format directly
+		Address:    incidentPtr.Block + ", Henrico County, VA",                          // google maps is extremely forgiving for interpreting input here, so we can just use county's format directly
+		Components: map[maps.Component]string{maps.ComponentLocality: "Henrico County"}, // restrict to Henrico County
 	}
 
 	resp, err := client.Geocode(context.Background(), request)
