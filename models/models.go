@@ -2,13 +2,14 @@ package models
 
 // each individual incident is of this type
 type Incident struct {
-	ID         string
-	Block      string
-	Location   Coordinate
-	Received   string
-	Type       string
-	CallStatus string
-	Distr      string
+	ID           string
+	Block        string
+	Location     Coordinate
+	Intersection bool
+	Received     string
+	Type         string
+	CallStatus   string
+	Distr        string
 	// Message    string
 }
 

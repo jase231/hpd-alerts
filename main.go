@@ -76,7 +76,7 @@ func (s *Server) getAlerts(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(s.incidents)
 }
 
-func (s *Server) toggleScraper(w http.ResponseWriter, r *http.Request) {
+func (s *Server) toggleScraper(w http.ResponseWriter) {
 	s.isRunning = !s.isRunning
 	w.WriteHeader(http.StatusOK)
 }

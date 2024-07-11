@@ -21,6 +21,27 @@ type NominatimResponse struct {
 	Lon string `json:"lon"`
 }
 
+func PopulateLocation(incidentsPtr map[string]models.Incident, mapsToken string) error {
+	for key := range incidentsPtr {
+		incident := (incidentsPtr)[key]
+
+		if mapsToken == "nominatim" {
+			if err := nominatimGeocode(&incident); err != nil {
+				return err
+			}
+		} else {
+			if err := googleGeocode(&incident, mapsToken); err != nil {
+				return err
+			}
+
+		}
+
+		(incidentsPtr)[key] = incident // set updated incident back to original map
+	}
+
+	return nil
+}
+
 func googleGeocode(incidentPtr *models.Incident, mapsToken string) error {
 	client, err := maps.NewClient(maps.WithAPIKey(mapsToken))
 	if err != nil {
@@ -42,19 +63,19 @@ func googleGeocode(incidentPtr *models.Incident, mapsToken string) error {
 	return nil
 }
 
-func removeBlock(address string) string {
-	sanitized := strings.Replace(address, "Block ", "", -1) // whitespace behind block to avoid double whitespace
-	sanitized = strings.TrimSpace(sanitized)
-	return sanitized
-}
-
 func nominatimGeocode(incidentPtr *models.Incident) error {
 	address := removeBlock(incidentPtr.Block) // nominatim fails with "Block" in the address
+
+	if isIntersection(address) {
+		incidentPtr.Intersection = true
+		address = removeIntersection(address)
+	}
 
 	baseURL := "https://nominatim.openstreetmap.org/search"
 
 	params := url.Values{}
-	params.Add("q", address)
+	params.Add("street", address)
+	params.Add("county", "Henrico County")
 	params.Add("format", "json")
 	params.Add("limit", "1")
 
@@ -104,23 +125,17 @@ func nominatimGeocode(incidentPtr *models.Incident) error {
 	return nil
 }
 
-func PopulateLocation(incidentsPtr map[string]models.Incident, mapsToken string) error {
-	for key := range incidentsPtr {
-		incident := (incidentsPtr)[key]
+func removeBlock(address string) string {
+	sanitized := strings.Replace(address, "Block ", "", -1) // whitespace behind block to avoid double whitespace
+	sanitized = strings.TrimSpace(sanitized)
+	return sanitized
+}
 
-		if mapsToken == "nominatim" {
-			if err := nominatimGeocode(&incident); err != nil {
-				return err
-			}
-		} else {
-			if err := googleGeocode(&incident, mapsToken); err != nil {
-				return err
-			}
+func isIntersection(address string) bool {
+	return strings.Contains(address, "/")
+}
 
-		}
-
-		(incidentsPtr)[key] = incident // set updated incident back to original map
-	}
-
-	return nil
+// removes one of the intersecting roads in order to at least get an approximate geocode from nominatim
+func removeIntersection(address string) string {
+	return strings.Split(address, "/")[0]
 }
