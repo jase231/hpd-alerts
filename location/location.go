@@ -2,14 +2,26 @@ package location
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/jase231/hpd-alerts/models"
 	"googlemaps.github.io/maps"
 )
 
-func getCoordinates(incidentPtr *models.Incident, mapsToken string) error {
+type NominatimResponse struct {
+	Lat string `json:"lat"`
+	Lon string `json:"lon"`
+}
+
+func googleGeocode(incidentPtr *models.Incident, mapsToken string) error {
 	client, err := maps.NewClient(maps.WithAPIKey(mapsToken))
 	if err != nil {
 		return fmt.Errorf("error creating Google Maps client: %v", err)
@@ -30,12 +42,81 @@ func getCoordinates(incidentPtr *models.Incident, mapsToken string) error {
 	return nil
 }
 
+func removeBlock(address string) string {
+	sanitized := strings.Replace(address, "Block ", "", -1) // whitespace behind block to avoid double whitespace
+	sanitized = strings.TrimSpace(sanitized)
+	return sanitized
+}
+
+func nominatimGeocode(incidentPtr *models.Incident) error {
+	address := removeBlock(incidentPtr.Block) // nominatim fails with "Block" in the address
+
+	baseURL := "https://nominatim.openstreetmap.org/search"
+
+	params := url.Values{}
+	params.Add("q", address)
+	params.Add("format", "json")
+	params.Add("limit", "1")
+
+	url := baseURL + "?" + params.Encode()
+
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	// User-Agent per Nominatim usage policy
+	req.Header.Set("User-Agent", "HPD-Alerts/1.0")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("nominatim API request failed with status code: %d", resp.StatusCode)
+	}
+	if resp.ContentLength == 2 {
+		log.Printf("no nominatim results found for address: %s", address) // usually this is because the provided address is an intersection which nominatim doesn't handle well
+		return nil
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("Error reading response body: %v", err)
+	}
+
+	var nominatimResp []NominatimResponse
+	err = json.Unmarshal(body, &nominatimResp)
+	if err != nil {
+		log.Fatalf("Error parsing JSON: %v", err)
+	}
+
+	lat := nominatimResp[0].Lat
+	lon := nominatimResp[0].Lon
+
+	incidentPtr.Location.Lat, _ = strconv.ParseFloat(lat, 64)
+	incidentPtr.Location.Lng, _ = strconv.ParseFloat(lon, 64)
+
+	time.Sleep(1 * time.Second) // ensure we don't abuse nominatim API
+	return nil
+}
+
 func PopulateLocation(incidentsPtr map[string]models.Incident, mapsToken string) error {
 	for key := range incidentsPtr {
 		incident := (incidentsPtr)[key]
 
-		if err := getCoordinates(&incident, mapsToken); err != nil {
-			return err
+		if mapsToken == "nominatim" {
+			if err := nominatimGeocode(&incident); err != nil {
+				return err
+			}
+		} else {
+			if err := googleGeocode(&incident, mapsToken); err != nil {
+				return err
+			}
+
 		}
 
 		(incidentsPtr)[key] = incident // set updated incident back to original map

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -25,11 +26,7 @@ type Server struct {
 	mapsToken string
 }
 
-func NewServer() (*Server, error) {
-	envToken := os.Getenv("MAPS_TOKEN")
-	if envToken == "" {
-		return nil, fmt.Errorf("missing google maps API key")
-	}
+func NewServer(envToken string) (*Server, error) {
 
 	return &Server{
 		incidents: make(map[string]models.Incident),
@@ -92,7 +89,20 @@ func (s *Server) writeError(w http.ResponseWriter, err error, status int) {
 }
 
 func main() {
-	server, err := NewServer()
+	// --provider flag for geocode provider
+	var provider, envToken string
+	flag.StringVar(&provider, "provider", "", "geocode provider to use (nominatim or google)")
+	flag.Parse()
+
+	if provider == "nominatim" {
+		envToken = "nominatim"
+	} else if provider == "google" {
+		envToken = os.Getenv("MAPS_TOKEN")
+	} else {
+		log.Fatalln("invalid provider, quitting...")
+	}
+
+	server, err := NewServer(envToken)
 	if err != nil {
 		log.Fatalln("couldn't spawn server, quitting:", err)
 	}
