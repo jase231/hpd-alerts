@@ -24,7 +24,7 @@ func RemoveStaleIncidents(incidentsPtr map[string]models.Incident, incidents map
 	}
 }
 
-func Scrape(incidentsPtr map[string]models.Incident) map[string]models.Incident {
+func Scrape() map[string]models.Incident {
 	c := colly.NewCollector()
 	incidents := make(map[string]models.Incident)
 
