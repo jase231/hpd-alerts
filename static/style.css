@@ -2,15 +2,16 @@ body, html {
     height: 100%; 
     margin: 0; 
     padding: 0; 
+    overflow-y: hidden;
 }
 #map { 
     height: 100%; 
-    width: 70%; 
+    width: 80%; 
     float: left; 
 }
 #sidebar { 
     height: 98%; 
-    width: 30%; 
+    width: 20%; 
     float: right; 
     overflow-y: auto; 
 }
