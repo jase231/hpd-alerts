@@ -64,7 +64,7 @@ func (s *Server) scrapeLoop() {
 			continue
 		}
 
-		newIncidents := scraper.Scrape(s.incidents)
+		newIncidents := scraper.Scrape()
 		scraper.RemoveStaleIncidents(s.incidents, newIncidents)
 		scraper.RemoveDuplicates(s.incidents, newIncidents)
 		if err := location.PopulateLocation(newIncidents, s.mapsToken); err != nil {
@@ -91,7 +91,8 @@ func (s *Server) getAlerts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET")
+
 	json.NewEncoder(w).Encode(s.incidents)
 }
 
