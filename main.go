@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -24,32 +25,37 @@ type Resp struct {
 }
 
 type Server struct {
-	incidents map[string]models.Incident
-	mu        sync.Mutex
-	isRunning bool
-	nominatim bool
-	mapsToken string
+	incidents      map[string]models.Incident
+	mu             sync.Mutex
+	isRunning      bool
+	nominatim      bool
+	mapsToken      string
+	scrapeInterval int
 }
 
-func NewServer(envToken string) (*Server, error) {
+func NewServer(envToken string, scrapeInterval int) (*Server, error) {
 	nominatim := false
 
 	if envToken == "" {
 		return nil, fmt.Errorf("missing Google Maps API token")
 	} else if envToken == "nominatim" {
 		nominatim = true
+		log.Printf("Starting Server using Nominatim. Polling county every %d seconds.\n", scrapeInterval)
+	} else {
+		log.Printf("Starting Server using Google Maps. Polling county %d seconds.\n", scrapeInterval)
 	}
 
 	return &Server{
-		incidents: make(map[string]models.Incident),
-		mapsToken: envToken,
-		isRunning: true,
-		nominatim: nominatim,
+		incidents:      make(map[string]models.Incident),
+		mapsToken:      envToken,
+		isRunning:      true,
+		nominatim:      nominatim,
+		scrapeInterval: scrapeInterval,
 	}, nil
 }
 
 func (s *Server) scrapeLoop() {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(time.Duration(s.scrapeInterval) * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -115,8 +121,10 @@ func (s *Server) writeNominatimJSON(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	// --provider flag for geocode provider
-	var provider, envToken string
+	// --interval flag for scrape interval
+	var provider, envToken, scrapeIntervalString string
 	flag.StringVar(&provider, "provider", "", "geocode provider to use (nominatim or google)")
+	flag.StringVar(&scrapeIntervalString, "interval", "60", "interval in seconds to scrape for new incidents")
 	flag.Parse()
 
 	if provider == "nominatim" {
@@ -127,7 +135,12 @@ func main() {
 		log.Fatalln("invalid provider, quitting...")
 	}
 
-	server, err := NewServer(envToken)
+	scrapeInterval, err := strconv.Atoi(scrapeIntervalString)
+	if err != nil || scrapeInterval < 5 {
+		log.Fatalln("invalid interval, quitting...")
+	}
+
+	server, err := NewServer(envToken, scrapeInterval)
 	if err != nil {
 		log.Fatalln("couldn't spawn server, quitting:", err)
 	}
