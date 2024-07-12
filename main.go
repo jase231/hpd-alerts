@@ -19,19 +19,32 @@ type Error struct {
 	Error string `json:"error"`
 }
 
+type Resp struct {
+	Provider bool `json:"nominatim"`
+}
+
 type Server struct {
 	incidents map[string]models.Incident
 	mu        sync.Mutex
 	isRunning bool
+	nominatim bool
 	mapsToken string
 }
 
 func NewServer(envToken string) (*Server, error) {
+	nominatim := false
+
+	if envToken == "" {
+		return nil, fmt.Errorf("missing Google Maps API token")
+	} else if envToken == "nominatim" {
+		nominatim = true
+	}
 
 	return &Server{
 		incidents: make(map[string]models.Incident),
 		mapsToken: envToken,
 		isRunning: true,
+		nominatim: nominatim,
 	}, nil
 }
 
@@ -82,10 +95,22 @@ func (s *Server) toggleScraper(w http.ResponseWriter) {
 }
 
 func (s *Server) writeError(w http.ResponseWriter, err error, status int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	log.Println("error:", status, err)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(Error{err.Error()})
+}
+
+func (s *Server) writeNominatimJSON(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(Resp{s.nominatim})
 }
 
 func main() {
@@ -123,6 +148,7 @@ func main() {
 		}
 	})
 
+	http.HandleFunc("/getProvider", server.writeNominatimJSON)
 	http.HandleFunc("/getAlerts", server.getAlerts)
 	// this function may be useful for eliminating wasted requests to the google maps API when no clients are connected
 	// however, this is not properly implemented yet in the frontend
