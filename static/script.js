@@ -34,8 +34,21 @@ function addIncident(incident) {
 
     marker.on('click', () => highlightSidebarIncident(incident.ID));
     playSound();
-    let listItem = $(`<div class="item" data-id="${incident.ID}">
-        <i class="map marker icon"></i>
+
+    let listItem = createListItem(incident);
+    $('#incident-list').append(listItem);
+
+    listItem.on('click', function() {
+        let incidentId = $(this).data('id');
+        highlightMarker(incidentId);
+        highlightSidebarIncident(incidentId);
+    });
+}
+
+function createListItem(incident) {
+    let iconClass = incident.Intersection ? "low vision icon" : "map marker icon";
+    return $(`<div class="item" data-id="${incident.ID}">
+        <i class="${iconClass}"></i>
         <div class="content">
             <div class="header">${incident.Type}</div>
             <div class="description">
@@ -46,13 +59,6 @@ function addIncident(incident) {
             </div>
         </div>
     </div>`);
-
-    $('#incident-list').append(listItem);
-    listItem.on('click', function() {
-        let incidentId = $(this).data('id');
-        highlightMarker(incidentId);
-        highlightSidebarIncident(incidentId);
-    });
 }
 
 function highlightMarker(incidentId) {
@@ -71,7 +77,7 @@ function highlightSidebarIncident(incidentId) {
 }
 
 function fetchIncidents() {
-    $.getJSON('https://TBD/getAlerts')
+    $.getJSON('/getAlerts')
         .then(data => Object.values(data).forEach(addIncident))
         .catch(error => console.error('Error fetching incidents:', error));
 }
@@ -81,7 +87,7 @@ function startLiveUpdates() {
 }
 
 function fetchNewIncidents() {
-    $.getJSON('https://TBD/getAlerts')
+    $.getJSON('/getAlerts')
         .then(data => {
             Object.values(data).forEach(incident => {
                 if (!markers[incident.ID]) {
@@ -121,10 +127,22 @@ function updateIncident(incident) {
 
 function playSound(url) {
     sound.play().catch(e => console.error("Error playing sound:", e));
-  }
+}
+
+function checkProviderAndShowModal() {
+    fetch('/getProvider')
+        .then(response => response.json())
+        .then(data => {
+            if (data.nominatim) {
+                $('#welcomeModal').modal('show');
+            }
+        })
+        .catch(error => console.error('Error fetching provider:', error));
+}
 
 $(document).ready(() => {
     initMap();
+    checkProviderAndShowModal();
     fetchIncidents();
     startLiveUpdates();
 });
