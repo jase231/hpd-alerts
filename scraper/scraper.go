@@ -8,18 +8,18 @@ import (
 	"github.com/jase231/hpd-alerts/models"
 )
 
-func RemoveDuplicates(incidentsPtr map[string]models.Incident, incidents map[string]models.Incident) {
-	for id, _ := range incidents {
-		if _, ok := incidentsPtr[id]; ok {
-			delete(incidents, id)
+func RemoveDuplicates(oldIncidents map[string]models.Incident, newIncidents map[string]models.Incident) {
+	for id := range newIncidents {
+		if _, ok := oldIncidents[id]; ok {
+			delete(newIncidents, id)
 		}
 	}
 }
 
-func RemoveStaleIncidents(incidentsPtr map[string]models.Incident, incidents map[string]models.Incident) {
-	for id, _ := range incidentsPtr {
-		if _, ok := incidents[id]; !ok {
-			delete(incidentsPtr, id)
+func RemoveStaleIncidents(oldIncidents map[string]models.Incident, newIncidents map[string]models.Incident) {
+	for id := range oldIncidents {
+		if _, ok := newIncidents[id]; !ok {
+			delete(oldIncidents, id)
 		}
 	}
 }
