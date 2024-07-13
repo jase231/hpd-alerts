@@ -1,6 +1,6 @@
 # Henrico County PD Alerts
 
-This tool scrapes [Henrico County's Active Police Calls](https://activecalls.henrico.us) and displays them on a Semantic + LeafletJS front-end.
+Scrapes [Henrico County's Active Police Calls](https://activecalls.henrico.us) and displays them on a Semantic + LeafletJS front-end.
 
 # Features:
 - Access to the underlying scraped data using the /getAlerts endpoint
