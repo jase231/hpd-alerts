@@ -72,7 +72,7 @@ func nominatimGeocode(incidentPtr *models.Incident) error {
 		address = removeIntersection(address)
 	}
 
-	baseURL := "https://nominatim.openstreetmap.org/search"
+	baseURL := "https://nominatim.geocoding.ai/search"
 
 	params := url.Values{}
 	params.Add("street", address)
