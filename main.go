@@ -66,12 +66,12 @@ func (s *Server) scrapeLoop() {
 
 		newIncidents := scraper.Scrape()
 		scraper.RemoveStaleIncidents(s.incidents, newIncidents)
+		s.mu.Lock()
 		scraper.RemoveDuplicates(s.incidents, newIncidents)
 		if err := location.PopulateLocation(newIncidents, s.mapsToken); err != nil {
 			log.Fatalln("can't get locations, quitting...", err)
 		}
 
-		s.mu.Lock()
 		for k, v := range newIncidents {
 			s.incidents[k] = v
 		}
@@ -137,7 +137,7 @@ func main() {
 	}
 
 	scrapeInterval, err := strconv.Atoi(scrapeIntervalString)
-	if err != nil || scrapeInterval < 5 {
+	if err != nil || scrapeInterval < 10 { // 10 seconds to avoid spamming the county
 		log.Fatalln("invalid interval, quitting...")
 	}
 
